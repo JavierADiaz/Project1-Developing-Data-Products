@@ -1,0 +1,82 @@
+---
+title: "Horizontal Radiation Map"
+author: "Javier A Diaz"
+date: "27 de mayo de 2018"
+output: html_document
+---
+
+```{r setup,eval=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Intriduction
+Solar energy potential is obtain from the horizonta radiation in each place of the world. In this project the value of this parameter is shown  at each place of climate stations around the world. A popup value give the average of available history by NASA
+
+## DATA
+Matrix build from data by POWER of NASA for solar superficial irradiation. Position of stations are obtain from NOAA. Icon made by Freepik from www.flaticon.com 
+```{r }
+library(dplyr)
+library(rnoaa)
+library(leaflet)
+# Read from downloaded file from climat from POWER of NASA
+## https://power.larc.nasa.gov
+solData<-read.csv("./solData/POWER_Global_Climatology_87c71bb6.csv")
+dim(solData)
+
+#Read and clean data of climat and position of stations
+#fileUrl<-"ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv"
+#download.file(fileUrl,destfile = "./soldata/history.csv")
+wsta<-read.csv("./solData/history.csv")
+wsta<-wsta[wsta$LAT !=0,]
+
+mis1<-which ( is.na(wsta),arr.ind=TRUE)
+wsta<-wsta[-mis1,]
+
+#Stablish interannual average Horizontal Irradiation for each #station
+
+HI<- function(lat,lng){
+           which(abs(lat-solData$LAT)<= 0.25& 
+                 abs(lng-solData$LON)<= 0.25)[1]
+    }
+
+clr<-NULL
+sr<-NULL
+for (i in seq_len(nrow(wsta))) {
+    sr[i]<-solData$ANN[HI(wsta$LAT[i],wsta$LON[i])]
+    clr[i]<- ifelse(sr[i]> 5.5,"red", "orange")
+}
+summary(sr)
+```
+## Interactive map of Solar Radiation
+The value of Horizontal radiation is presented as a pupop for each climate station. Thepoints of the stations are obtained from NOAA.
+The number of stations are with in the circles of the cluster.
+By picking the circules or the + - bottonid posible to go to station and place.
+
+```{r echo= FALSE}
+
+sun_map<-leaflet()%>%
+  addTiles()%>%
+  addMarkers(lat = wsta$LAT,
+             lng= wsta$LON,
+             clusterOptions = markerClusterOptions()) 
+
+wsta%>%
+  leaflet()%>%
+  addTiles() %>%
+  addCircleMarkers(weight=1.5,radius =(sr^2)*1.5,color = clr,
+                   clusterOptions = markerClusterOptions(),
+                   popup= as.character(sr))%>%
+  addLegend(labels = c("< 5.5 Wh/m2/day",">5.5 Wh/m2/day"),
+            colors=  c("orange","red"),
+            title= "Horizontal Radiation Date 27/05/2018 ") %>%
+  addLabelOnlyMarkers(lat= 0,lng = -90,label="Date 27/05/2018",
+             labelOptions = labelOptions(noHide=T))
+ 
+
+
+```
+## Conclusions
+An interactive map can resume a large volums of information
+Leaftlet pakages is a versatil tool for fixing this cain of maps.
+
+
